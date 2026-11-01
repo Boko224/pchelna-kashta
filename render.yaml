@@ -1,0 +1,30 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# One Node web service that serves both the API and the built frontend.
+# SQLite and uploaded images live on a persistent disk mounted at /var/data.
+services:
+  - type: web
+    name: pchelna-kashta
+    runtime: node
+    plan: starter # persistent disks are not available on the free plan
+    region: frankfurt
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/settings
+    autoDeploy: true
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATA_DIR
+        value: /var/data
+      - key: TRUST_PROXY
+        value: "1"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
