@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import jwt from 'jsonwebtoken';
 import { db, DATA_DIR } from './db.js';
+import { createLimiter } from './utils.js';
 
 // Use JWT_SECRET from the environment, otherwise a random secret persisted in data/.
 function loadSecret() {
@@ -35,25 +36,15 @@ export function requireAdmin(req, res, next) {
   }
 }
 
-// Simple in-memory brute-force protection for the login endpoint.
-const attempts = new Map();
-const WINDOW_MS = 15 * 60 * 1000;
-const MAX_ATTEMPTS = 10;
+// Brute-force protection for the login endpoint: 10 failed attempts per IP per 15 minutes.
+const loginFailures = createLimiter({ windowMs: 15 * 60 * 1000, max: 10 });
 
 export function loginRateLimit(req, res, next) {
-  const now = Date.now();
-  const entry = attempts.get(req.ip);
-  if (entry && entry.until > now && entry.count >= MAX_ATTEMPTS) {
+  if (loginFailures.blocked(req.ip)) {
     return res.status(429).json({ error: 'Твърде много опити. Опитайте отново след 15 минути.' });
   }
   next();
 }
 
-export function recordLoginFailure(ip) {
-  const now = Date.now();
-  const entry = attempts.get(ip);
-  if (!entry || entry.until <= now) attempts.set(ip, { count: 1, until: now + WINDOW_MS });
-  else entry.count++;
-}
-
-export const clearLoginFailures = (ip) => attempts.delete(ip);
+export const recordLoginFailure = (ip) => loginFailures.hit(ip);
+export const clearLoginFailures = (ip) => loginFailures.reset(ip);

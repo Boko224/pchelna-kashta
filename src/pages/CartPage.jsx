@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import ProductImage from '../components/ProductImage.jsx';
 import QuantityInput from '../components/QuantityInput.jsx';
-import { useCart } from '../lib/cart.jsx';
+import { useCart, MAX_QTY } from '../lib/cart.jsx';
 import { useSettings } from '../lib/settings.jsx';
 import { formatMoney, shippingFor } from '../lib/format.js';
 
@@ -59,7 +59,7 @@ export default function CartPage() {
                 <Link to={`/products/${item.slug}`} className="cart-item__name">{item.name}</Link>
                 <span className="muted small">{item.unit} · {formatMoney(item.price_cents)}</span>
               </div>
-              <QuantityInput value={item.quantity} max={item.stock || 99} onChange={(q) => setQuantity(item.id, q)} />
+              <QuantityInput value={item.quantity} max={Math.min(item.stock || MAX_QTY, MAX_QTY)} onChange={(q) => setQuantity(item.id, q)} />
               <strong className="cart-item__total">{formatMoney(item.price_cents * item.quantity)}</strong>
               <button type="button" className="icon-btn" onClick={() => remove(item.id)} aria-label={`Премахни ${item.name}`}>
                 ✕

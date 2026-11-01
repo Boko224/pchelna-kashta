@@ -44,6 +44,31 @@ export const bool = (v) => (v === true || v === 1 || v === '1' || v === 'true' ?
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const PHONE_RE = /^\+?[\d\s\-()]{6,20}$/;
 
+// In-memory fixed-window counter per key (e.g. client IP). Expired entries are swept periodically.
+export function createLimiter({ windowMs, max }) {
+  const hits = new Map();
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of hits) if (entry.until <= now) hits.delete(key);
+  }, windowMs).unref();
+
+  return {
+    blocked(key) {
+      const entry = hits.get(key);
+      return !!entry && entry.until > Date.now() && entry.count >= max;
+    },
+    hit(key) {
+      const now = Date.now();
+      const entry = hits.get(key);
+      if (!entry || entry.until <= now) hits.set(key, { count: 1, until: now + windowMs });
+      else entry.count++;
+    },
+    reset(key) {
+      hits.delete(key);
+    },
+  };
+}
+
 export function shippingFor(subtotalCents, settings) {
   if (subtotalCents <= 0) return 0;
   const freeFrom = settings.free_shipping_from_cents;

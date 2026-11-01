@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db, getSettings, transaction } from '../db.js';
-import { HttpError, text, int, EMAIL_RE, PHONE_RE, shippingFor } from '../utils.js';
+import { HttpError, text, int, EMAIL_RE, PHONE_RE, shippingFor, createLimiter } from '../utils.js';
 
 const router = Router();
 
@@ -59,7 +59,13 @@ router.get('/products/:slug', (req, res) => {
   res.json(product);
 });
 
+// Orders reserve stock immediately, so cap how many one IP can place (5 per hour).
+const orderLimiter = createLimiter({ windowMs: 60 * 60 * 1000, max: 5 });
+
 router.post('/orders', (req, res) => {
+  if (orderLimiter.blocked(req.ip)) {
+    throw new HttpError(429, 'Твърде много поръчки от този адрес. Опитайте отново по-късно или се обадете по телефона.');
+  }
   const c = req.body?.customer || {};
   const customer = {
     name: text(c.name, 'Име и фамилия', { required: true, max: 100 }),
@@ -134,6 +140,7 @@ router.post('/orders', (req, res) => {
     };
   });
 
+  orderLimiter.hit(req.ip);
   res.status(201).json(order);
 });
 

@@ -8,6 +8,12 @@ import { HttpError } from './utils.js';
 
 const app = express();
 app.disable('x-powered-by');
+// Behind a reverse proxy (nginx, Cloudflare, …) set TRUST_PROXY (e.g. 1 = one proxy hop) so req.ip is the
+// real client IP for rate limiting. Leave it unset otherwise, or clients could spoof X-Forwarded-For.
+if (process.env.TRUST_PROXY) {
+  const v = process.env.TRUST_PROXY;
+  app.set('trust proxy', /^\d+$/.test(v) ? Number(v) : v === 'true' ? true : v);
+}
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: '7d' }));

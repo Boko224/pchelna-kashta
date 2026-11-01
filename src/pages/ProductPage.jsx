@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard.jsx';
 import QuantityInput from '../components/QuantityInput.jsx';
 import { api } from '../lib/api.js';
 import { useFetch } from '../lib/useFetch.js';
-import { useCart } from '../lib/cart.jsx';
+import { useCart, MAX_QTY } from '../lib/cart.jsx';
 import { formatMoney } from '../lib/format.js';
 
 export default function ProductPage() {
@@ -30,7 +30,7 @@ export default function ProductPage() {
   }
 
   const inCart = items.find((i) => i.id === product.id)?.quantity || 0;
-  const available = Math.max(product.stock - inCart, 0);
+  const available = Math.max(Math.min(product.stock, MAX_QTY) - inCart, 0);
   const others = (related.data || []).filter((p) => p.id !== product.id).slice(0, 4);
 
   return (
